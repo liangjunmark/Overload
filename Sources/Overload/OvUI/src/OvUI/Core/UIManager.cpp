@@ -5,6 +5,10 @@
 */
 
 #include "OvUI/Core/UIManager.h"
+#include <mutex>
+#include <thread>
+#include <vector>
+#include <iostream>
 
 OvUI::Core::UIManager::UIManager(GLFWwindow* p_glfwWindow, Styling::EStyle p_style, const std::string& p_glslVersion)
 {
@@ -16,7 +20,7 @@ OvUI::Core::UIManager::UIManager(GLFWwindow* p_glfwWindow, Styling::EStyle p_sty
 	ApplyStyle(p_style);
 	
 	ImGui_ImplGlfw_InitForOpenGL(p_glfwWindow, true);
-	ImGui_ImplOpenGL3_Init(p_glslVersion.c_str());
+	ImGui_ImplOpenGL3_Init(p_glslVersion.c_str(), ImGuiBackendFlags_DefaultDesktop);
 }
 
 OvUI::Core::UIManager::~UIManager()
@@ -29,7 +33,8 @@ OvUI::Core::UIManager::~UIManager()
 void OvUI::Core::UIManager::ApplyStyle(Styling::EStyle p_style)
 {
 	ImGuiStyle* style = &ImGui::GetStyle();
-
+	style->ScaleAllSizes(2);
+	ImGui::GetIO().FontGlobalScale = 2;
 	switch (p_style)
 	{
 	case OvUI::Styling::EStyle::IM_CLASSIC_STYLE:	ImGui::StyleColorsClassic();	break;
@@ -89,7 +94,7 @@ void OvUI::Core::UIManager::ApplyStyle(Styling::EStyle p_style)
 		style->Colors[ImGuiCol_PlotHistogram] = ImVec4(0.40f, 0.39f, 0.38f, 0.63f);
 		style->Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.25f, 1.00f, 0.00f, 1.00f);
 		style->Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.25f, 1.00f, 0.00f, 0.43f);
-		style->Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
+		//style->Colors[ImGuiCol_ModalWindowDarkening] = ImVec4(1.00f, 0.98f, 0.95f, 0.73f);
 
 		style->Colors[ImGuiCol_Tab] = style->Colors[ImGuiCol_TabUnfocused];
 	}
@@ -168,12 +173,14 @@ void OvUI::Core::UIManager::ApplyStyle(Styling::EStyle p_style)
     }
 }
 
-bool OvUI::Core::UIManager::LoadFont(const std::string& p_id, const std::string & p_path, float p_fontSize)
+bool OvUI::Core::UIManager::LoadFont(const std::string& p_id, const std::string& p_path, float p_fontSize)
 {
 	if (m_fonts.find(p_id) == m_fonts.end())
 	{
 		auto& io = ImGui::GetIO();
-		ImFont* fontInstance = io.Fonts->AddFontFromFileTTF(p_path.c_str(), p_fontSize);
+		ImFontConfig config;
+		config.SignedDistanceFont = true;
+		ImFont* fontInstance = io.Fonts->AddFontFromFileTTF(p_path.c_str(), p_fontSize, &config, io.Fonts->GetGlyphRangesDefault());
 
 		if (fontInstance)
 		{
@@ -183,6 +190,32 @@ bool OvUI::Core::UIManager::LoadFont(const std::string& p_id, const std::string 
 	}
 	
 	return false;
+}
+
+void OvUI::Core::UIManager::BuildFont() {
+	ImGui::GetIO().Fonts->Build(
+		[](ImRunner runner, unsigned int count, void* arg) {
+			std::mutex mutex;
+			std::cout << "background: " << count << std::endl;
+			const auto& f = [runner, arg, &count, &mutex] {
+				mutex.lock();
+				while (count > 0) {
+					auto current = --count;
+					mutex.unlock();
+					runner(current, arg);
+					mutex.lock();
+				}
+				mutex.unlock();
+				};
+			std::vector<std::thread> threads{ std::min(std::thread::hardware_concurrency() - 1, count) };
+			for (auto& t : threads) {
+				t = std::thread(f);
+			}
+			f();
+			for (auto& t : threads)
+				t.join();
+		}
+	);
 }
 
 bool OvUI::Core::UIManager::UnloadFont(const std::string & p_id)

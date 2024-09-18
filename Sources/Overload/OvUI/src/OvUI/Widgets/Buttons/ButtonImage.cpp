@@ -18,6 +18,8 @@ void OvUI::Widgets::Buttons::ButtonImage::_Draw_Impl()
 	ImVec4 bg = Internal::Converter::ToImVec4(background);
 	ImVec4 tn = Internal::Converter::ToImVec4(tint);
 
-	if (ImGui::ImageButton(textureID.raw, Internal::Converter::ToImVec2(size), ImVec2(0.f, 1.f), ImVec2(1.f, 0.f), -1, bg, tn, disabled ? ImGuiButtonFlags_Disabled : 0))
+	ImGui::BeginDisabled(disabled);
+	if (ImGui::ImageButton(textureID.raw, Internal::Converter::ToImVec2(size), ImVec2(0.f, 1.f), ImVec2(1.f, 0.f), -1, bg, tn))
 		ClickedEvent.Invoke();
+	ImGui::EndDisabled();
 }
