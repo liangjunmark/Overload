@@ -6199,26 +6199,26 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
                 window->DrawList->AddLine(menu_bar_rect.GetBL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
         }
 
-        // Docking: Unhide tab bar (small triangle in the corner), drag from small triangle to quickly undock
-        ImGuiDockNode* node = window->DockNode;
-        if (window->DockIsActive && node->IsHiddenTabBar() && !node->IsNoTabBar())
-        {
-            float unhide_sz_draw = ImFloor(g.FontSize * 0.70f);
-            float unhide_sz_hit = ImFloor(g.FontSize * 0.55f);
-            ImVec2 p = node->Pos;
-            ImRect r(p, p + ImVec2(unhide_sz_hit, unhide_sz_hit));
-            ImGuiID unhide_id = window->GetID("#UNHIDE");
-            KeepAliveID(unhide_id);
-            bool hovered, held;
-            if (ButtonBehavior(r, unhide_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren))
-                node->WantHiddenTabBarToggle = true;
-            else if (held && IsMouseDragging(0))
-                StartMouseMovingWindowOrNode(window, node, true);
-
-            // FIXME-DOCK: Ideally we'd use ImGuiCol_TitleBgActive/ImGuiCol_TitleBg here, but neither is guaranteed to be visible enough at this sort of size..
-            ImU32 col = GetColorU32(((held && hovered) || (node->IsFocused && !hovered)) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-            window->DrawList->AddTriangleFilled(p, p + ImVec2(unhide_sz_draw, 0.0f), p + ImVec2(0.0f, unhide_sz_draw), col);
-        }
+        //// Docking: Unhide tab bar (small triangle in the corner), drag from small triangle to quickly undock
+        //ImGuiDockNode* node = window->DockNode;
+        //if (window->DockIsActive && node->IsHiddenTabBar() && !node->IsNoTabBar())
+        //{
+        //    float unhide_sz_draw = ImFloor(g.FontSize * 0.70f);
+        //    float unhide_sz_hit = ImFloor(g.FontSize * 0.55f);
+        //    ImVec2 p = node->Pos;
+        //    ImRect r(p, p + ImVec2(unhide_sz_hit, unhide_sz_hit));
+        //    ImGuiID unhide_id = window->GetID("#UNHIDE");
+        //    KeepAliveID(unhide_id);
+        //    bool hovered, held;
+        //    if (ButtonBehavior(r, unhide_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren))
+        //        node->WantHiddenTabBarToggle = true;
+        //    else if (held && IsMouseDragging(0))
+        //        StartMouseMovingWindowOrNode(window, node, true);
+        //
+        //    // FIXME-DOCK: Ideally we'd use ImGuiCol_TitleBgActive/ImGuiCol_TitleBg here, but neither is guaranteed to be visible enough at this sort of size..
+        //    ImU32 col = GetColorU32(((held && hovered) || (node->IsFocused && !hovered)) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+        //    window->DrawList->AddTriangleFilled(p, p + ImVec2(unhide_sz_draw, 0.0f), p + ImVec2(0.0f, unhide_sz_draw), col);
+        //}
 
         // Scrollbars
         if (window->ScrollbarX)
@@ -16286,14 +16286,14 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     const ImGuiDockNodeFlags node_flags = node->MergedFlags;
     const bool has_window_menu_button = (node_flags & ImGuiDockNodeFlags_NoWindowMenuButton) == 0 && (style.WindowMenuButtonPosition != ImGuiDir_None);
 
-    // In a dock node, the Collapse Button turns into the Window Menu button.
-    // FIXME-DOCK FIXME-OPT: Could we recycle popups id across multiple dock nodes?
-    if (has_window_menu_button && IsPopupOpen("#WindowMenu"))
-    {
-        if (ImGuiID tab_id = DockNodeUpdateWindowMenu(node, tab_bar))
-            focus_tab_id = tab_bar->NextSelectedTabId = tab_id;
-        is_focused |= node->IsFocused;
-    }
+    //// In a dock node, the Collapse Button turns into the Window Menu button.
+    //// FIXME-DOCK FIXME-OPT: Could we recycle popups id across multiple dock nodes?
+    //if (has_window_menu_button && IsPopupOpen("#WindowMenu"))
+    //{
+    //    if (ImGuiID tab_id = DockNodeUpdateWindowMenu(node, tab_bar))
+    //        focus_tab_id = tab_bar->NextSelectedTabId = tab_id;
+    //    is_focused |= node->IsFocused;
+    //}
 
     // Layout
     ImRect title_bar_rect, tab_bar_rect;
@@ -16318,13 +16318,13 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     host_window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, host_window->WindowRounding, rounding_flags);
 
     // Docking/Collapse button
-    if (has_window_menu_button)
-    {
-        if (CollapseButton(host_window->GetID("#COLLAPSE"), window_menu_button_pos, node)) // == DockNodeGetWindowMenuButtonId(node)
-            OpenPopup("#WindowMenu");
-        if (IsItemActive())
-            focus_tab_id = tab_bar->SelectedTabId;
-    }
+    //if (has_window_menu_button)
+    //{
+    //    if (CollapseButton(host_window->GetID("#COLLAPSE"), window_menu_button_pos, node)) // == DockNodeGetWindowMenuButtonId(node)
+    //        OpenPopup("#WindowMenu");
+    //    if (IsItemActive())
+    //        focus_tab_id = tab_bar->SelectedTabId;
+    //}
 
     // If multiple tabs are appearing on the same frame, sort them based on their persistent DockOrder value
     int tabs_unsorted_start = tab_bar->Tabs.Size;
@@ -16576,15 +16576,15 @@ static void ImGui::DockNodeCalcTabBarLayout(const ImGuiDockNode* node, ImRect* o
         r.Max.x -= button_sz;
         if (out_close_button_pos) *out_close_button_pos = ImVec2(r.Max.x - style.FramePadding.x, r.Min.y);
     }
-    if (node->HasWindowMenuButton && style.WindowMenuButtonPosition == ImGuiDir_Left)
-    {
-        r.Min.x += button_sz + style.ItemInnerSpacing.x;
-    }
-    else if (node->HasWindowMenuButton && style.WindowMenuButtonPosition == ImGuiDir_Right)
-    {
-        r.Max.x -= button_sz + style.FramePadding.x;
-        window_menu_button_pos = ImVec2(r.Max.x, r.Min.y);
-    }
+    //if (node->HasWindowMenuButton && style.WindowMenuButtonPosition == ImGuiDir_Left)
+    //{
+    //    r.Min.x += button_sz + style.ItemInnerSpacing.x;
+    //}
+    //else if (node->HasWindowMenuButton && style.WindowMenuButtonPosition == ImGuiDir_Right)
+    //{
+    //    r.Max.x -= button_sz + style.FramePadding.x;
+    //    window_menu_button_pos = ImVec2(r.Max.x, r.Min.y);
+    //}
     if (out_tab_bar_rect) { *out_tab_bar_rect = r; }
     if (out_window_menu_button_pos) { *out_window_menu_button_pos = window_menu_button_pos; }
 }
