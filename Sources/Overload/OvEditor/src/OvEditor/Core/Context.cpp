@@ -66,11 +66,12 @@ OvEditor::Core::Context::Context(const std::string& p_projectPath, const std::st
 	std::filesystem::create_directories(std::string(getenv("APPDATA")) + "\\OverloadTech\\OvEditor\\");
 
 	uiManager = std::make_unique<OvUI::Core::UIManager>(window->GetGlfwWindow(), OvUI::Styling::EStyle::ALTERNATIVE_DARK);
-	uiManager->LoadFont("Ruda_Big", editorAssetsPath + "\\Fonts\\Ruda-Bold.ttf", 16);
-	uiManager->LoadFont("Ruda_Small", editorAssetsPath + "\\Fonts\\Ruda-Bold.ttf", 12);
-	uiManager->LoadFont("Ruda_Medium", editorAssetsPath + "\\Fonts\\Ruda-Bold.ttf", 14);
+	uiManager->LoadFont("small", "font/AlibabaPuHuiTi-2-65-Medium.ttf", 18, false);
+	uiManager->LoadFont("medium", "font/AlibabaPuHuiTi-2-65-Medium.ttf", 21, false);
+	uiManager->LoadFont("large", "font/AlibabaPuHuiTi-2-65-Medium.ttf", 30, false);
+	uiManager->LoadFont("editor", "font/milky-mono-cn-regular.ttf", 18, true);
 	uiManager->BuildFont();
-	uiManager->UseFont("Ruda_Medium");
+	uiManager->UseFont("medium");
 	uiManager->SetEditorLayoutSaveFilename(std::string(getenv("APPDATA")) + "\\OverloadTech\\OvEditor\\layout.ini");
 	uiManager->SetEditorLayoutAutosaveFrequency(60.0f);
 	uiManager->EnableEditorLayoutSave(true);

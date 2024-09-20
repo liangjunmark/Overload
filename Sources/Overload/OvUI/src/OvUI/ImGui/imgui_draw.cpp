@@ -2549,7 +2549,6 @@ bool    ImFontAtlas::Build(ImDispatch dispatcher)
         IM_ASSERT(0); // Invalid Build function
 #endif
     }
-
     // Build
     return builder_io->FontBuilder_Build(this, dispatcher);
 }
@@ -2616,6 +2615,14 @@ struct ImFontAtlasRunnerArgs {
     stbtt_pack_range range;
     stbrp_rect* rects;
 };
+#include "cista.h"
+#include <fstream>
+struct ImFontAtlasCache {
+    cista::raw::vector<unsigned char>    pixels;
+    cista::raw::vector<stbtt_packedchar> chardata;
+    cista::raw::vector<stbrp_rect>       rects;
+};
+
 static void ImFontAtlasRunner(unsigned int i, void* arg) {
     ImVector<ImFontAtlasRunnerArgs>& b = *static_cast<ImVector<ImFontAtlasRunnerArgs>*>(arg);
     unsigned int size = b.Size;
@@ -2849,8 +2856,84 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas, ImDispatch dispa
         }
     }
 
-    if (dispatcher && background.size() > 0)
-        (*dispatcher)(ImFontAtlasRunner, background.size(), &background);
+    //load font cache
+    std::string cache_name = "font_cache.bin";
+    std::ifstream file_in(cache_name, std::ios::binary | std::ios::ate);
+    if (file_in.is_open()) {
+        //deserialize
+        auto size_rec = file_in.tellg();
+        file_in.seekg(0, std::ios::beg);
+        cista::byte_buf buf_in(size_rec);
+        file_in.read(reinterpret_cast<char*>(buf_in.data()), size_rec);
+        file_in.close();
+        auto font_cache_in = cista::deserialize<ImFontAtlasCache>(buf_in);
+        //rects
+        int idx = 0;
+        for (int src_i = 0; src_i < src_tmp_array.Size; src_i++) {
+            ImFontConfig& cfg = atlas->ConfigData[src_i];
+            ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
+            if (src_tmp.GlyphsCount == 0)
+                continue;
+            bool sdf = globalSDF && cfg.SignedDistanceFont;
+            if (sdf && dispatcher) {
+                const int batchSize = 25;
+                for (int j = 0; j < src_tmp.PackRange.num_chars; j += batchSize) {
+                    src_tmp.Rects[j] = font_cache_in->rects.at(idx);
+                    idx++;
+                }
+            }
+        }
+        //pixels
+        auto len = atlas->TexWidth * atlas->TexHeight;
+        for (auto i = 0; i < len; i++) {
+            atlas->TexPixelsAlpha8[i] = font_cache_in->pixels.at(i);
+        }
+        //chardata
+        idx = 0;
+        for (auto i = 0; i < background.size(); ++i) {
+            for (auto j = 0; j < background[i].range.num_chars; ++j) {
+                background[i].range.chardata_for_range[j] = font_cache_in->chardata[idx];
+                idx++;
+            }
+        }
+    }
+    else {
+        //load without font cache
+        if (dispatcher && background.size() > 0)
+            (*dispatcher)(ImFontAtlasRunner, background.size(), &background);
+
+        ImFontAtlasCache font_cache_out;
+        //rects
+        for (int src_i = 0; src_i < src_tmp_array.Size; src_i++) {
+            ImFontConfig& cfg = atlas->ConfigData[src_i];
+            ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
+            if (src_tmp.GlyphsCount == 0)
+                continue;
+            bool sdf = globalSDF && cfg.SignedDistanceFont;
+            if (sdf && dispatcher) {
+                const int batchSize = 25;
+                for (int j = 0; j < src_tmp.PackRange.num_chars; j += batchSize) {
+                    font_cache_out.rects.emplace_back(src_tmp.Rects[j]);
+                }
+            }
+        }
+        //pixels
+        auto len = atlas->TexWidth * atlas->TexHeight;
+        for (auto i = 0; i < len; i++) {
+            font_cache_out.pixels.emplace_back(atlas->TexPixelsAlpha8[i]);
+        }
+        //chardata
+        for (auto i = 0; i < background.size(); ++i) {
+            for (auto j = 0; j < background[i].range.num_chars; ++j) {
+                font_cache_out.chardata.emplace_back(background[i].range.chardata_for_range[j]);
+            }
+        }
+        //serialize
+        cista::byte_buf buf = cista::serialize(font_cache_out);
+        std::ofstream out_pix(cache_name, std::ios::binary);
+        out_pix.write(reinterpret_cast<const char*>(buf.data()), buf.size());
+        out_pix.close();
+    }
 
     for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
     {

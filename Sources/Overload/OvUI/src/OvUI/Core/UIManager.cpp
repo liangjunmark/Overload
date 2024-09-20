@@ -173,14 +173,14 @@ void OvUI::Core::UIManager::ApplyStyle(Styling::EStyle p_style)
     }
 }
 
-bool OvUI::Core::UIManager::LoadFont(const std::string& p_id, const std::string& p_path, float p_fontSize)
+bool OvUI::Core::UIManager::LoadFont(const std::string& p_id, const std::string& p_path, float p_fontSize, bool p_is4CJK)
 {
 	if (m_fonts.find(p_id) == m_fonts.end())
 	{
 		auto& io = ImGui::GetIO();
 		ImFontConfig config;
 		config.SignedDistanceFont = true;
-		ImFont* fontInstance = io.Fonts->AddFontFromFileTTF(p_path.c_str(), p_fontSize, &config, io.Fonts->GetGlyphRangesDefault());
+		ImFont* fontInstance = io.Fonts->AddFontFromFileTTF(p_path.c_str(), p_fontSize, &config, p_is4CJK ? io.Fonts->GetGlyphRangesChineseSimplifiedCommon() : io.Fonts->GetGlyphRangesDefault());
 
 		if (fontInstance)
 		{

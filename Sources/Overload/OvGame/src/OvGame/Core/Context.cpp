@@ -65,11 +65,12 @@ OvGame::Core::Context::Context() :
 	});
 
 	uiManager = std::make_unique<OvUI::Core::UIManager>(window->GetGlfwWindow(), OvUI::Styling::EStyle::ALTERNATIVE_DARK);
-	uiManager->LoadFont("Ruda_Big", engineAssetsPath + "Fonts\\Ruda-Bold.ttf", 16);
-	uiManager->LoadFont("Ruda_Small", engineAssetsPath + "Fonts\\Ruda-Bold.ttf", 12);
-	uiManager->LoadFont("Ruda_Medium", engineAssetsPath + "Fonts\\Ruda-Bold.ttf", 14);
+	uiManager->LoadFont("small", "font/AlibabaPuHuiTi-2-65-Medium.ttf", 18, false);
+	uiManager->LoadFont("medium", "font/AlibabaPuHuiTi-2-65-Medium.ttf", 21, false);
+	uiManager->LoadFont("large", "font/AlibabaPuHuiTi-2-65-Medium.ttf", 30, false);
+	uiManager->LoadFont("editor", "font/milky-mono-cn-regular.ttf", 18, true);
 	uiManager->BuildFont();
-	uiManager->UseFont("Ruda_Medium");
+	uiManager->UseFont("medium");
 	uiManager->EnableEditorLayoutSave(false);
 	uiManager->EnableDocking(false);
 

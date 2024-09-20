@@ -296,9 +296,12 @@ void OvEditor::Core::ProjectHub::SetupContext()
 	m_driver = std::make_unique<OvRendering::Context::Driver>(OvRendering::Settings::DriverSettings{ false });
 
 	m_uiManager = std::make_unique<OvUI::Core::UIManager>(m_window->GetGlfwWindow(), OvUI::Styling::EStyle::ALTERNATIVE_DARK);
-	m_uiManager->LoadFont("Ruda_Big", "Data\\Editor\\Fonts\\Ruda-Bold.ttf", 18);
+	m_uiManager->LoadFont("small", "font/AlibabaPuHuiTi-2-65-Medium.ttf", 18, false);
+	m_uiManager->LoadFont("medium", "font/AlibabaPuHuiTi-2-65-Medium.ttf", 21, false);
+	m_uiManager->LoadFont("large", "font/AlibabaPuHuiTi-2-65-Medium.ttf", 30, false);
+	m_uiManager->LoadFont("editor", "font/milky-mono-cn-regular.ttf", 18, true);
 	m_uiManager->BuildFont();
-	m_uiManager->UseFont("Ruda_Big");
+	m_uiManager->UseFont("large");
 	m_uiManager->EnableEditorLayoutSave(false);
 	m_uiManager->EnableDocking(false);
 }
