@@ -2617,11 +2617,12 @@ struct ImFontAtlasRunnerArgs {
 };
 #include "cista.h"
 #include <fstream>
-struct ImFontAtlasCache {
-    cista::raw::vector<unsigned char>    pixels;
+#include <iostream>
+struct ImFontAtlasCacheInfo {
     cista::raw::vector<stbtt_packedchar> chardata;
     cista::raw::vector<stbrp_rect>       rects;
 };
+using ImFontAtlasCachePixel = cista::raw::vector<unsigned char>;
 
 static void ImFontAtlasRunner(unsigned int i, void* arg) {
     ImVector<ImFontAtlasRunnerArgs>& b = *static_cast<ImVector<ImFontAtlasRunnerArgs>*>(arg);
@@ -2857,16 +2858,26 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas, ImDispatch dispa
     }
 
     //load font cache
-    std::string cache_name = "font_cache.bin";
-    std::ifstream file_in(cache_name, std::ios::binary | std::ios::ate);
-    if (file_in.is_open()) {
-        //deserialize
-        auto size_rec = file_in.tellg();
-        file_in.seekg(0, std::ios::beg);
-        cista::byte_buf buf_in(size_rec);
-        file_in.read(reinterpret_cast<char*>(buf_in.data()), size_rec);
-        file_in.close();
-        auto font_cache_in = cista::deserialize<ImFontAtlasCache>(buf_in);
+    std::string info_cache_filename = "cache_info.bin";
+    std::string pixel_cache_filename = "cache_pixel.bin";
+    std::ifstream info_cache_file(info_cache_filename, std::ios::binary | std::ios::ate);
+    std::ifstream pixel_cache_file(pixel_cache_filename, std::ios::binary | std::ios::ate);
+    //clock_t start_time, end_time;
+    if (info_cache_file.is_open() && pixel_cache_file.is_open()) {
+        //start_time = clock();
+        //info deserialize
+        auto info_size = info_cache_file.tellg();
+        info_cache_file.seekg(0, std::ios::beg);
+        cista::byte_buf info_buf(info_size);
+        info_cache_file.read(reinterpret_cast<char*>(info_buf.data()), info_size);
+        info_cache_file.close();
+        //end_time = clock();
+        //std::cout << "read Duration: " << (double)(end_time - start_time) / CLOCKS_PER_SEC * 1000 << "ms" << std::endl;
+        //start_time = clock();
+        auto info_cache = cista::deserialize<ImFontAtlasCacheInfo>(info_buf);
+        //end_time = clock();
+        //std::cout << "dese Duration: " << (double)(end_time - start_time) / CLOCKS_PER_SEC * 1000 << "ms" << std::endl;
+        //start_time = clock();
         //rects
         int idx = 0;
         for (int src_i = 0; src_i < src_tmp_array.Size; src_i++) {
@@ -2878,31 +2889,52 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas, ImDispatch dispa
             if (sdf && dispatcher) {
                 const int batchSize = 25;
                 for (int j = 0; j < src_tmp.PackRange.num_chars; j += batchSize) {
-                    src_tmp.Rects[j] = font_cache_in->rects.at(idx);
+                    src_tmp.Rects[j] = info_cache->rects.at(idx);
                     idx++;
                 }
             }
         }
-        //pixels
-        auto len = atlas->TexWidth * atlas->TexHeight;
-        for (auto i = 0; i < len; i++) {
-            atlas->TexPixelsAlpha8[i] = font_cache_in->pixels.at(i);
-        }
+        //end_time = clock();
+        //std::cout << "rect Duration: " << (double)(end_time - start_time) / CLOCKS_PER_SEC * 1000 << "ms" << std::endl;
+        //start_time = clock();
         //chardata
         idx = 0;
         for (auto i = 0; i < background.size(); ++i) {
             for (auto j = 0; j < background[i].range.num_chars; ++j) {
-                background[i].range.chardata_for_range[j] = font_cache_in->chardata[idx];
+                background[i].range.chardata_for_range[j] = info_cache->chardata[idx];
                 idx++;
             }
         }
+        //end_time = clock();
+        //std::cout << "Duration: " << (double)(end_time - start_time) / CLOCKS_PER_SEC * 1000 << "ms" << std::endl;
+        //start_time = clock();
+        //pixel deserialize
+        auto pixel_size = pixel_cache_file.tellg();
+        pixel_cache_file.seekg(0, std::ios::beg);
+        cista::byte_buf pixel_buf(pixel_size);
+        pixel_cache_file.read(reinterpret_cast<char*>(pixel_buf.data()), pixel_size);
+        pixel_cache_file.close();
+        //end_time = clock();
+        //std::cout << "read Duration: " << (double)(end_time - start_time) / CLOCKS_PER_SEC * 1000 << "ms" << std::endl;
+        //start_time = clock();
+        //pixels
+        auto len = atlas->TexWidth * atlas->TexHeight;
+        for (auto i = 0; i < len; i++) {
+            atlas->TexPixelsAlpha8[i] = pixel_buf.at(i);
+        }
+        //end_time = clock();
+        //std::cout << "pixl Duration: " << (double)(end_time - start_time) / CLOCKS_PER_SEC * 1000 << "ms" << std::endl;
+        //start_time = clock();
     }
     else {
+        //start_time = clock();
         //load without font cache
         if (dispatcher && background.size() > 0)
             (*dispatcher)(ImFontAtlasRunner, background.size(), &background);
+        //end_time = clock();
+        //std::cout << "build Duration: " << (double)(end_time - start_time) / CLOCKS_PER_SEC * 1000 << "ms" << std::endl;
 
-        ImFontAtlasCache font_cache_out;
+        ImFontAtlasCacheInfo info_cache;
         //rects
         for (int src_i = 0; src_i < src_tmp_array.Size; src_i++) {
             ImFontConfig& cfg = atlas->ConfigData[src_i];
@@ -2913,26 +2945,26 @@ static bool ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas, ImDispatch dispa
             if (sdf && dispatcher) {
                 const int batchSize = 25;
                 for (int j = 0; j < src_tmp.PackRange.num_chars; j += batchSize) {
-                    font_cache_out.rects.emplace_back(src_tmp.Rects[j]);
+                    info_cache.rects.emplace_back(src_tmp.Rects[j]);
                 }
             }
-        }
-        //pixels
-        auto len = atlas->TexWidth * atlas->TexHeight;
-        for (auto i = 0; i < len; i++) {
-            font_cache_out.pixels.emplace_back(atlas->TexPixelsAlpha8[i]);
         }
         //chardata
         for (auto i = 0; i < background.size(); ++i) {
             for (auto j = 0; j < background[i].range.num_chars; ++j) {
-                font_cache_out.chardata.emplace_back(background[i].range.chardata_for_range[j]);
+                info_cache.chardata.emplace_back(background[i].range.chardata_for_range[j]);
             }
         }
         //serialize
-        cista::byte_buf buf = cista::serialize(font_cache_out);
-        std::ofstream out_pix(cache_name, std::ios::binary);
-        out_pix.write(reinterpret_cast<const char*>(buf.data()), buf.size());
-        out_pix.close();
+        cista::byte_buf info_buf = cista::serialize(info_cache);
+        std::ofstream info_file_out(info_cache_filename, std::ios::binary);
+        info_file_out.write(reinterpret_cast<const char*>(info_buf.data()), info_buf.size());
+        info_file_out.close();
+        //pixels
+        std::ofstream pixel_file_out(pixel_cache_filename, std::ios::binary);
+        auto len = atlas->TexWidth * atlas->TexHeight;
+        pixel_file_out.write(reinterpret_cast<const char*>(atlas->TexPixelsAlpha8), len);
+        pixel_file_out.close();
     }
 
     for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
